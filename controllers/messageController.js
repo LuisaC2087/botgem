@@ -7,11 +7,10 @@ const handleIncomingMessage = async (req, res) => {
 
     const event = req.body.events?.[0];
 
-    // Validación básica del evento
     if (!event || event.type !== 'message' || !event.payload) {
-      console.log('❌ No se recibió un evento de mensaje válido.');
-      return res.sendStatus(400);
-    }
+    console.log('❌ No se recibió un evento de mensaje válido.');
+    return res.status(200).send('No es mensaje válido, pero OK'); // 👈 CAMBIADO
+  }
 
     const msg = event.payload.text;
     const from = event.payload.source;
