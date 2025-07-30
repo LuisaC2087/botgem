@@ -5,32 +5,47 @@ const handleIncomingMessage = async (req, res) => {
   try {
     console.log('✅ BODY RECIBIDO:', JSON.stringify(req.body, null, 2));
 
+    // 🟡 SOPORTE PARA FORMATO V2
+    if (req.body.version === 2 && req.body.type === 'message') {
+      const payload = req.body.payload;
+      const msg = payload?.payload?.text;
+      const from = payload?.source;
+
+      if (!msg || !from) {
+        console.log('❌ Faltan datos en el payload (v2).');
+        return res.sendStatus(400);
+      }
+
+      console.log(`📩 [v2] Mensaje recibido de ${from}: "${msg}"`);
+      const respuesta = await getGeminiResponse(msg);
+      console.log(`🤖 Respuesta de Gemini: "${respuesta}"`);
+      await enviarRespuestaGupshup(from, respuesta);
+      console.log('📤 [v2] Respuesta enviada correctamente.');
+      return res.sendStatus(200);
+    }
+
+    // 🟢 FORMATO ORIGINAL (v1)
     const event = req.body.events?.[0];
 
     if (!event || event.type !== 'message' || !event.payload) {
-    console.log('❌ No se recibió un evento de mensaje válido.');
-    return res.status(200).send('No es mensaje válido, pero OK'); // 👈 CAMBIADO
-  }
+      console.log('❌ No se recibió un evento de mensaje válido.');
+      return res.status(200).send('No es mensaje válido, pero OK');
+    }
 
     const msg = event.payload.text;
     const from = event.payload.source;
 
     if (!msg || !from) {
-      console.log('❌ Faltan datos en el payload (texto o número de origen).');
+      console.log('❌ Faltan datos en el payload (v1).');
       return res.sendStatus(400);
     }
 
-    console.log(`📩 Mensaje recibido de ${from}: "${msg}"`);
+    console.log(`📩 [v1] Mensaje recibido de ${from}: "${msg}"`);
 
-    // Obtener respuesta del modelo Gemini
     const respuesta = await getGeminiResponse(msg);
-
     console.log(`🤖 Respuesta de Gemini: "${respuesta}"`);
-
-    // Enviar la respuesta por Gupshup
     await enviarRespuestaGupshup(from, respuesta);
-
-    console.log('📤 Respuesta enviada correctamente.');
+    console.log('📤 [v1] Respuesta enviada correctamente.');
     res.sendStatus(200);
   } catch (error) {
     console.error('❌ Error en controller:', error);
@@ -43,7 +58,7 @@ const enviarRespuestaGupshup = async (to, message) => {
     await axios.post('https://api.gupshup.io/sm/api/v1/msg', null, {
       params: {
         channel: 'whatsapp',
-        source: process.env.GUPSHUP_SANDBOX_NUMBER, // ejemplo: '917834811114'
+        source: process.env.GUPSHUP_SANDBOX_NUMBER,
         destination: to,
         message: JSON.stringify({ type: 'text', text: message }),
         'src.name': process.env.GUPSHUP_BOT_NAME
