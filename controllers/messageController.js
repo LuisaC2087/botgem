@@ -55,6 +55,15 @@ const handleIncomingMessage = async (req, res) => {
 
 const enviarRespuestaGupshup = async (to, message) => {
   try {
+
+    console.log('🔍 Enviando con estos datos:', {
+      apikey: process.env.GUPSHUP_API_KEY?.slice(0, 6) + '...',
+      source: process.env.GUPSHUP_SANDBOX_NUMBER,
+      botName: process.env.GUPSHUP_BOT_NAME,
+      destination: to,
+      message
+    });
+
     await axios.post('https://api.gupshup.io/sm/api/v1/msg', null, {
       params: {
         channel: 'whatsapp',
